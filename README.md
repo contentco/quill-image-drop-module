@@ -40,3 +40,8 @@ var quill = new Quill(editor, {
     }
 });
 ```
+
+
+## Contributing
+
+Please check out our [contributing guidelines](CONTRIBUTING.md).
