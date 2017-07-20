@@ -13,12 +13,43 @@ export class ImageDrop {
 	constructor(quill, options = {}) {
 		// save the quill reference
 		this.quill = quill;
+
+		this.options = options;
+		if (!this.options.fileHandler) {
+			this.options.fileHandler = this.fileHandler;
+		}
 		// bind handlers to this instance
 		this.handleDrop = this.handleDrop.bind(this);
 		this.handlePaste = this.handlePaste.bind(this);
 		// listen for drop and paste events
 		this.quill.root.addEventListener('drop', this.handleDrop, false);
 		this.quill.root.addEventListener('paste', this.handlePaste, false);
+
+	}
+
+	/**
+	 * Default Filehandler, included in the constructor, but expected to be overridden
+	 * @param {Event} evt
+	 */
+	fileHandler(files, callback) {
+		// check each file for an image
+		[].forEach.call(files, file => {
+			if (!file.type.match(/^image\/(gif|jpe?g|a?png|svg|webp|bmp|vnd\.microsoft\.icon)/i)) {
+				// file is not an image
+				// Note that some file formats such as psd start with image/* but are not readable
+				return;
+			}
+			// set up file reader
+			const reader = new FileReader();
+			reader.onload = (evt) => {
+				callback(evt.target.result);
+			};
+			// read the clipboard item or file
+			const blob = file.getAsFile ? file.getAsFile() : file;
+			if (blob instanceof Blob) {
+				reader.readAsDataURL(blob);
+			}
+		});
 	}
 
 	/**
@@ -68,23 +99,8 @@ export class ImageDrop {
 	 * @param {Function} callback  A function to send each data URI to
 	 */
 	readFiles(files, callback) {
-		// check each file for an image
-		[].forEach.call(files, file => {
-			if (!file.type.match(/^image\/(gif|jpe?g|a?png|svg|webp|bmp|vnd\.microsoft\.icon)/i)) {
-				// file is not an image
-				// Note that some file formats such as psd start with image/* but are not readable
-				return;
-			}
-			// set up file reader
-			const reader = new FileReader();
-			reader.onload = (evt) => {
-				callback(evt.target.result);
-			};
-			// read the clipboard item or file
-			const blob = file.getAsFile ? file.getAsFile() : file;
-			if (blob instanceof Blob) {
-				reader.readAsDataURL(blob);
-			}
+		this.options.fileHandler(files, (result) => {
+			callback(result);
 		});
 	}
 

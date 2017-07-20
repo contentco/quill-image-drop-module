@@ -6,9 +6,9 @@
 /******/ 	function __webpack_require__(moduleId) {
 /******/
 /******/ 		// Check if module is in cache
-/******/ 		if(installedModules[moduleId])
+/******/ 		if(installedModules[moduleId]) {
 /******/ 			return installedModules[moduleId].exports;
-/******/
+/******/ 		}
 /******/ 		// Create a new module (and put it into the cache)
 /******/ 		var module = installedModules[moduleId] = {
 /******/ 			i: moduleId,
@@ -100,6 +100,11 @@ var ImageDrop = exports.ImageDrop = function () {
 
 		// save the quill reference
 		this.quill = quill;
+
+		this.options = options;
+		if (!this.options.fileHandler) {
+			this.options.fileHandler = this.fileHandler;
+		}
 		// bind handlers to this instance
 		this.handleDrop = this.handleDrop.bind(this);
 		this.handlePaste = this.handlePaste.bind(this);
@@ -109,12 +114,40 @@ var ImageDrop = exports.ImageDrop = function () {
 	}
 
 	/**
-  * Handler for drop event to read dropped files from evt.dataTransfer
+  * Default Filehandler, included in the constructor, but expected to be overridden
   * @param {Event} evt
   */
 
 
 	_createClass(ImageDrop, [{
+		key: 'fileHandler',
+		value: function fileHandler(files, callback) {
+			// check each file for an image
+			[].forEach.call(files, function (file) {
+				if (!file.type.match(/^image\/(gif|jpe?g|a?png|svg|webp|bmp|vnd\.microsoft\.icon)/i)) {
+					// file is not an image
+					// Note that some file formats such as psd start with image/* but are not readable
+					return;
+				}
+				// set up file reader
+				var reader = new FileReader();
+				reader.onload = function (evt) {
+					callback(evt.target.result);
+				};
+				// read the clipboard item or file
+				var blob = file.getAsFile ? file.getAsFile() : file;
+				if (blob instanceof Blob) {
+					reader.readAsDataURL(blob);
+				}
+			});
+		}
+
+		/**
+   * Handler for drop event to read dropped files from evt.dataTransfer
+   * @param {Event} evt
+   */
+
+	}, {
 		key: 'handleDrop',
 		value: function handleDrop(evt) {
 			evt.preventDefault();
@@ -171,23 +204,8 @@ var ImageDrop = exports.ImageDrop = function () {
 	}, {
 		key: 'readFiles',
 		value: function readFiles(files, callback) {
-			// check each file for an image
-			[].forEach.call(files, function (file) {
-				if (!file.type.match(/^image\/(gif|jpe?g|a?png|svg|webp|bmp|vnd\.microsoft\.icon)/i)) {
-					// file is not an image
-					// Note that some file formats such as psd start with image/* but are not readable
-					return;
-				}
-				// set up file reader
-				var reader = new FileReader();
-				reader.onload = function (evt) {
-					callback(evt.target.result);
-				};
-				// read the clipboard item or file
-				var blob = file.getAsFile ? file.getAsFile() : file;
-				if (blob instanceof Blob) {
-					reader.readAsDataURL(blob);
-				}
+			this.options.fileHandler(files, function (result) {
+				callback(result);
 			});
 		}
 	}]);
